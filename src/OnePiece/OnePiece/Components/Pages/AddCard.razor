@@ -2,7 +2,9 @@
 @attribute [StreamRendering]
 @rendermode InteractiveServer
 @using System.IO
+@using OnePiece.Services
 @inject IWebHostEnvironment Environment
+@inject IAzureVisionService AzureVisionService
 
 <PageTitle>Add Card</PageTitle>
 
@@ -22,15 +24,39 @@
                         <div class="form-text">Supported format: JPG only. Maximum size: 10MB</div>
                     </div>
                     
-                    @if (previewImageUrl != null)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Image Preview</label>
-                            <div>
-                                <img src="@previewImageUrl" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
-                            </div>
-                        </div>
-                    }
+                                         @if (previewImageUrl != null)
+                     {
+                         <div class="mb-3">
+                             <label class="form-label">Image Preview</label>
+                             <div>
+                                 <img src="@previewImageUrl" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                             </div>
+                         </div>
+                         
+                         <div class="mb-3">
+                             <button type="button" class="btn btn-info" @onclick="AnalyzeImageText" disabled="@isAnalyzing">
+                                 @if (isAnalyzing)
+                                 {
+                                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                     <span>Analyzing...</span>
+                                 }
+                                 else
+                                 {
+                                     <span>Analyze Japanese Text</span>
+                                 }
+                             </button>
+                         </div>
+                     }
+                     
+                     @if (!string.IsNullOrEmpty(extractedText))
+                     {
+                         <div class="mb-3">
+                             <label class="form-label">Extracted Japanese Text</label>
+                             <div class="border rounded p-3 bg-light">
+                                 <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">@extractedText</pre>
+                             </div>
+                         </div>
+                     }
                     
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-primary" @onclick="HandleFileUpload" disabled="@(isUploading || selectedFile == null)">
@@ -94,9 +120,11 @@
     private IBrowserFile? selectedFile;
     private string? previewImageUrl;
     private bool isUploading;
+    private bool isAnalyzing;
     private string? uploadMessage;
     private bool isSuccess;
     private readonly List<string> uploadedFiles = [];
+    private string? extractedText;
     
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -173,6 +201,7 @@
         selectedFile = null;
         previewImageUrl = null;
         uploadMessage = null;
+        extractedText = null;
         StateHasChanged();
     }
     
@@ -181,5 +210,36 @@
         uploadMessage = message;
         isSuccess = success;
         StateHasChanged();
+    }
+    
+    private async Task AnalyzeImageText()
+    {
+        if (selectedFile == null)
+        {
+            ShowMessage("Please select a file to analyze.", false);
+            return;
+        }
+        
+        try
+        {
+            isAnalyzing = true;
+            StateHasChanged();
+            
+            // Open the file stream and analyze it with Azure Vision
+            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            extractedText = await AzureVisionService.AnalyzeImageForJapaneseTextAsync(stream);
+            
+            ShowMessage("Image analysis completed successfully!", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error analyzing image: {ex.Message}", false);
+            extractedText = null;
+        }
+        finally
+        {
+            isAnalyzing = false;
+            StateHasChanged();
+        }
     }
 }

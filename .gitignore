@@ -419,3 +419,6 @@ FodyWeavers.xsd
 
 # User uploaded files
 **/wwwroot/uploads/*
+
+# User secrets
+**/Properties/launchSettings.json

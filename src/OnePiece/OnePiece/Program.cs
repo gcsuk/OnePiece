@@ -1,5 +1,6 @@
 using OnePiece.Client.Pages;
 using OnePiece.Components;
+using OnePiece.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+// Add Azure Vision service
+builder.Services.AddHttpClient<IAzureVisionService, AzureVisionService>();
 
 var app = builder.Build();
 
