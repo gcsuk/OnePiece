@@ -93,10 +93,10 @@
 @code {
     private IBrowserFile? selectedFile;
     private string? previewImageUrl;
-    private bool isUploading = false;
+    private bool isUploading;
     private string? uploadMessage;
-    private bool isSuccess = false;
-    private List<string> uploadedFiles = new();
+    private bool isSuccess;
+    private readonly List<string> uploadedFiles = [];
     
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -107,7 +107,7 @@
             // Create preview
             if (selectedFile != null)
             {
-                var format = "image/jpeg";
+                const string format = "image/jpeg";
                 var resizedImage = await selectedFile.RequestImageFileAsync(format, 200, 200);
                 var buffer = new byte[resizedImage.Size];
                 await resizedImage.OpenReadStream().ReadAsync(buffer);
@@ -149,8 +149,8 @@
             var filePath = Path.Combine(uploadsPath, fileName);
             
             // Save file to disk
-            using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
-            using var fileStream = File.Create(filePath);
+            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
+            await using var fileStream = File.Create(filePath);
             await stream.CopyToAsync(fileStream);
             
             uploadedFiles.Insert(0, fileName);
