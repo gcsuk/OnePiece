@@ -1,0 +1,185 @@
+@page "/addcard"
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+@using System.IO
+@inject IWebHostEnvironment Environment
+
+<PageTitle>Add Card</PageTitle>
+
+<div class="container mt-4">
+    <h1>Upload Card Image</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Select Image File</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Card Image</label>
+                        <InputFile id="fileInput" class="form-control" OnChange="OnInputFileChange" accept=".jpg,.jpeg" />
+                        <div class="form-text">Supported format: JPG only. Maximum size: 10MB</div>
+                    </div>
+                    
+                    @if (previewImageUrl != null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Image Preview</label>
+                            <div>
+                                <img src="@previewImageUrl" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" @onclick="HandleFileUpload" disabled="@(isUploading || selectedFile == null)">
+                            @if (isUploading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Uploading...</span>
+                            }
+                            else
+                            {
+                                <span>Upload Image</span>
+                            }
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="ClearForm">Clear</button>
+                    </div>
+                    
+                    <!-- Debug info -->
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Selected file: @(selectedFile?.Name ?? "None") | 
+                            Button disabled: @(isUploading || selectedFile == null)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Upload Status</h6>
+                </div>
+                <div class="card-body">
+                    @if (uploadMessage != null)
+                    {
+                        <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show" role="alert">
+                            @uploadMessage
+                            <button type="button" class="btn-close" @onclick="() => uploadMessage = null"></button>
+                        </div>
+                    }
+                    
+                    @if (uploadedFiles.Any())
+                    {
+                        <h6>Recently Uploaded Files:</h6>
+                        <ul class="list-unstyled">
+                            @foreach (var file in uploadedFiles.Take(5))
+                            {
+                                <li class="mb-2">
+                                    <small class="text-muted">@file</small>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IBrowserFile? selectedFile;
+    private string? previewImageUrl;
+    private bool isUploading = false;
+    private string? uploadMessage;
+    private bool isSuccess = false;
+    private List<string> uploadedFiles = new();
+    
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            selectedFile = e.File;
+            
+            // Create preview
+            if (selectedFile != null)
+            {
+                var format = "image/jpeg";
+                var resizedImage = await selectedFile.RequestImageFileAsync(format, 200, 200);
+                var buffer = new byte[resizedImage.Size];
+                await resizedImage.OpenReadStream().ReadAsync(buffer);
+                previewImageUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Handle any errors during preview generation
+            ShowMessage($"Error creating preview: {ex.Message}", false);
+        }
+    }
+    
+    private async Task HandleFileUpload()
+    {
+        if (selectedFile == null)
+        {
+            ShowMessage("Please select a file to upload.", false);
+            return;
+        }
+        
+        try
+        {
+            isUploading = true;
+            StateHasChanged();
+            
+            // Create uploads directory if it doesn't exist
+            var uploadsPath = Path.Combine(Environment.WebRootPath, "uploads");
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+            
+            // Generate unique filename
+            var fileExtension = Path.GetExtension(selectedFile.Name);
+            var fileName = $"{Guid.NewGuid()}{fileExtension}";
+            var filePath = Path.Combine(uploadsPath, fileName);
+            
+            // Save file to disk
+            using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
+            using var fileStream = File.Create(filePath);
+            await stream.CopyToAsync(fileStream);
+            
+            uploadedFiles.Insert(0, fileName);
+            ShowMessage($"Image uploaded successfully! File saved as {fileName}", true);
+            ClearForm();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error uploading file: {ex.Message}", false);
+        }
+        finally
+        {
+            isUploading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ClearForm()
+    {
+        selectedFile = null;
+        previewImageUrl = null;
+        uploadMessage = null;
+        StateHasChanged();
+    }
+    
+    private void ShowMessage(string message, bool success)
+    {
+        uploadMessage = message;
+        isSuccess = success;
+        StateHasChanged();
+    }
+}
