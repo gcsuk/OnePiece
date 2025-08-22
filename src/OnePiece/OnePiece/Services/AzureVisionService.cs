@@ -1,6 +1,7 @@
 using Azure;
 using Azure.AI.Vision.ImageAnalysis;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using OnePiece.Configuration;
 
 namespace OnePiece.Services;
 
@@ -14,14 +15,15 @@ public class AzureVisionService : IAzureVisionService
     private readonly string _endpoint;
     private readonly string _apiKey;
 
-    public AzureVisionService(IConfiguration configuration)
+    public AzureVisionService(IOptions<AzureVisionOptions> options)
     {
-        _endpoint = configuration["AzureVision:Endpoint"] ?? throw new InvalidOperationException("Azure Vision endpoint not configured");
-        _apiKey = configuration["AzureVision:ApiKey"] ?? throw new InvalidOperationException("Azure Vision API key not configured");
+        var config = options.Value;
+        _endpoint = config.Endpoint ?? throw new InvalidOperationException("Azure Vision endpoint not configured");
+        _apiKey = config.ApiKey ?? throw new InvalidOperationException("Azure Vision API key not configured");
         
         // Debug logging (remove in production)
         Console.WriteLine($"Azure Vision Endpoint: {_endpoint}");
-        Console.WriteLine($"Azure Vision API Key: {_apiKey.Substring(0, Math.Min(8, _apiKey.Length))}...");
+        Console.WriteLine($"Azure Vision API Key: {_apiKey[..Math.Min(8, _apiKey.Length)]}...");
     }
 
     public async Task<string> AnalyzeImageForJapaneseTextAsync(Stream imageStream)

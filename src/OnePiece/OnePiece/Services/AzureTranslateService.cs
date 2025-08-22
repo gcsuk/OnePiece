@@ -1,6 +1,7 @@
 using Azure;
 using Azure.AI.Translation.Text;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using OnePiece.Configuration;
 
 namespace OnePiece.Services;
 
@@ -14,14 +15,11 @@ public class AzureTranslateService : IAzureTranslateService
     private readonly string _endpoint;
     private readonly string _apiKey;
 
-    public AzureTranslateService(IConfiguration configuration)
+    public AzureTranslateService(IOptions<AzureTranslateOptions> options)
     {
-        _endpoint = configuration["AzureTranslate:Endpoint"] ?? throw new InvalidOperationException("Azure Translator endpoint not configured");
-        _apiKey = configuration["AzureTranslate:ApiKey"] ?? throw new InvalidOperationException("Azure Translator API key not configured");
-        
-        // Debug logging (remove in production)
-        Console.WriteLine($"Azure Translator Endpoint: {_endpoint}");
-        Console.WriteLine($"Azure Translator API Key: {_apiKey.Substring(0, Math.Min(8, _apiKey.Length))}...");
+        var config = options.Value;
+        _endpoint = config.Endpoint ?? throw new InvalidOperationException("Azure Translator endpoint not configured");
+        _apiKey = config.ApiKey ?? throw new InvalidOperationException("Azure Translator API key not configured");
     }
 
     public async Task<string> TranslateJapaneseToEnglishAsync(string japaneseText)
@@ -39,15 +37,15 @@ public class AzureTranslateService : IAzureTranslateService
 
             // Perform the translation
             var response = await client.TranslateAsync(
-                targetLanguages: new[] { "en" },  // English
-                content: new[] { japaneseText },
-                sourceLanguage: "ja"  // Japanese
+                targetLanguages: ["en"],
+                content: [japaneseText],
+                sourceLanguage: "ja"
             );
 
-            if (response?.Value != null && response.Value.Count > 0)
+            if (response?.Value is { Count: > 0 })
             {
                 var firstResult = response.Value[0];
-                if (firstResult?.Translations != null && firstResult.Translations.Count > 0)
+                if (firstResult?.Translations is { Count: > 0 })
                 {
                     var translation = firstResult.Translations[0];
                     return translation?.Text ?? "Translation failed.";

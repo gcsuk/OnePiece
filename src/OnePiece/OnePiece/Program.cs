@@ -1,6 +1,7 @@
 using OnePiece.Client.Pages;
 using OnePiece.Components;
 using OnePiece.Services;
+using OnePiece.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+// Configure options
+builder.Services.Configure<AzureVisionOptions>(
+    builder.Configuration.GetSection(AzureVisionOptions.SectionName));
+builder.Services.Configure<AzureTranslateOptions>(
+    builder.Configuration.GetSection(AzureTranslateOptions.SectionName));
 
 // Add Azure Vision service
 builder.Services.AddScoped<IAzureVisionService, AzureVisionService>();
