@@ -5,6 +5,7 @@
 @using OnePiece.Services
 @inject IWebHostEnvironment Environment
 @inject IAzureVisionService AzureVisionService
+@inject IAzureTranslateService AzureTranslateService
 
 <PageTitle>Add Card</PageTitle>
 
@@ -54,6 +55,30 @@
                              <label class="form-label">Extracted Japanese Text</label>
                              <div class="border rounded p-3 bg-light">
                                  <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">@extractedText</pre>
+                             </div>
+                             
+                             <div class="mt-2">
+                                 <button type="button" class="btn btn-success" @onclick="TranslateText" disabled="@isTranslating">
+                                     @if (isTranslating)
+                                     {
+                                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                         <span>Translating...</span>
+                                     }
+                                     else
+                                     {
+                                         <span>Translate to English</span>
+                                     }
+                                 </button>
+                             </div>
+                         </div>
+                     }
+                     
+                     @if (!string.IsNullOrEmpty(translatedText))
+                     {
+                         <div class="mb-3">
+                             <label class="form-label">English Translation</label>
+                             <div class="border rounded p-3 bg-success bg-opacity-10">
+                                 <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">@translatedText</pre>
                              </div>
                          </div>
                      }
@@ -121,10 +146,12 @@
     private string? previewImageUrl;
     private bool isUploading;
     private bool isAnalyzing;
+    private bool isTranslating;
     private string? uploadMessage;
     private bool isSuccess;
     private readonly List<string> uploadedFiles = [];
     private string? extractedText;
+    private string? translatedText;
     
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -202,6 +229,7 @@
         previewImageUrl = null;
         uploadMessage = null;
         extractedText = null;
+        translatedText = null;
         StateHasChanged();
     }
     
@@ -239,6 +267,36 @@
         finally
         {
             isAnalyzing = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task TranslateText()
+    {
+        if (string.IsNullOrWhiteSpace(extractedText))
+        {
+            ShowMessage("No text to translate.", false);
+            return;
+        }
+        
+        try
+        {
+            isTranslating = true;
+            StateHasChanged();
+            
+            // Translate the extracted Japanese text to English
+            translatedText = await AzureTranslateService.TranslateJapaneseToEnglishAsync(extractedText);
+            
+            ShowMessage("Translation completed successfully!", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error translating text: {ex.Message}", false);
+            translatedText = null;
+        }
+        finally
+        {
+            isTranslating = false;
             StateHasChanged();
         }
     }

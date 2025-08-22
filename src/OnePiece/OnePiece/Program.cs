@@ -10,7 +10,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 // Add Azure Vision service
-builder.Services.AddHttpClient<IAzureVisionService, AzureVisionService>();
+builder.Services.AddScoped<IAzureVisionService, AzureVisionService>();
+
+// Add Azure Translate service
+builder.Services.AddScoped<IAzureTranslateService, AzureTranslateService>();
 
 var app = builder.Build();
 
