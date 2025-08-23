@@ -11,16 +11,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 // Configure options
-builder.Services.Configure<AzureVisionOptions>(
-    builder.Configuration.GetSection(AzureVisionOptions.SectionName));
-builder.Services.Configure<AzureTranslateOptions>(
-    builder.Configuration.GetSection(AzureTranslateOptions.SectionName));
+builder.Services.Configure<OpenAIOptions>(
+    builder.Configuration.GetSection(OpenAIOptions.SectionName));
 
-// Add Azure Vision service
-builder.Services.AddScoped<IAzureVisionService, AzureVisionService>();
-
-// Add Azure Translate service
-builder.Services.AddScoped<IAzureTranslateService, AzureTranslateService>();
+// Add OpenAI Vision service
+builder.Services.AddScoped<IOpenAIVisionService, OpenAIVisionService>();
 
 var app = builder.Build();
 
