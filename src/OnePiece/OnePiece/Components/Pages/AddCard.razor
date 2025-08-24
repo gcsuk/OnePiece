@@ -7,6 +7,7 @@
 @using OnePiece.Services
 @using OnePiece.Models
 @inject IWebHostEnvironment Environment
+@inject ICardProcessingService CardProcessingService
 @inject IOpenAIVisionService OpenAIVisionService
 @inject IJSRuntime JS
 
@@ -19,273 +20,325 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Select Image File</h5>
+                    <h5 class="mb-0">Upload & Process OnePiece Card</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label for="fileInput" class="form-label">Card Image</label>
-                        <InputFile id="fileInput" class="form-control" OnChange="OnInputFileChange" accept=".jpg,.jpeg" />
-                        <div class="form-text">Supported format: JPG only. Maximum size: 10MB</div>
+                    <!-- File Selection -->
+                    <div class="mb-4">
+                        <label for="fileInput" class="form-label">Select Card Image</label>
+                        <InputFile id="fileInput" class="form-control" OnChange="OnInputFileChange" accept=".jpg,.jpeg,.png" />
+                        <div class="form-text">Supported formats: JPG, JPEG, PNG. Maximum size: 10MB</div>
                     </div>
                     
-                                         @if (previewImageUrl != null)
-                     {
-                         <div class="mb-3">
-                             <label class="form-label">Image Preview</label>
-                             <div>
-                                 <img src="@previewImageUrl" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
-                             </div>
-                         </div>
-                         
-                         <div class="mb-3">
-                             <button type="button" class="btn btn-primary me-2" @onclick="AnalyzeOnePieceCard" disabled="@isAnalyzing">
-                                 @if (isAnalyzing)
-                                 {
-                                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                     <span>Analyzing...</span>
-                                 }
-                                 else
-                                 {
-                                     <span>Analyze Card</span>
-                                 }
-                             </button>
-                             
-                             <button type="button" class="btn btn-success" @onclick="AnalyzeAndTranslateCard" disabled="@isAnalyzingAndTranslating">
-                                 @if (isAnalyzingAndTranslating)
-                                 {
-                                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                     <span>Analyzing & Translating...</span>
-                                 }
-                                 else
-                                 {
-                                     <span>Analyze & Translate</span>
-                                 }
-                             </button>
-                         </div>
-                     }
-                     
-                     @if (onePieceCard != null)
-                     {
-                         <div class="mb-3">
-                             <label class="form-label">OnePiece Card Analysis</label>
-                             <div class="border rounded p-3 bg-primary bg-opacity-10">
-                                 <div class="row">
-                                     <div class="col-md-6">
-                                         <h6>Card Name (JP):</h6>
-                                         <p class="mb-2 fw-bold">@(onePieceCard.NameJapanese ?? "Not detected")</p>
-                                         
-                                         <h6>Card Name (EN):</h6>
-                                         <p class="mb-2">@(onePieceCard.NameEnglish ?? "Not detected")</p>
-                                         
-                                         <h6>Card Type:</h6>
-                                         <p class="mb-2">@(onePieceCard.Type ?? "Not detected")</p>
-                                         
-                                         <h6>Color:</h6>
-                                         <p class="mb-2">@(onePieceCard.Color ?? "Not detected")</p>
-                                         
-                                         <h6>Power:</h6>
-                                         <p class="mb-2">@(onePieceCard.Power?.ToString() ?? "Not detected")</p>
-                                         
-                                         <h6>Cost:</h6>
-                                         <p class="mb-2">@(onePieceCard.Cost?.ToString() ?? "Not detected")</p>
-                                     </div>
-                                     <div class="col-md-6">
-                                         <h6>Attribute:</h6>
-                                         <p class="mb-2">@(onePieceCard.Attribute ?? "Not detected")</p>
-                                         
-                                         <h6>Set Code:</h6>
-                                         <p class="mb-2">@(onePieceCard.SetCode ?? "Not detected")</p>
-                                         
-                                         <h6>Collector Number:</h6>
-                                         <p class="mb-2">@(onePieceCard.CollectorNumber ?? "Not detected")</p>
-                                         
-                                         <h6>Rarity:</h6>
-                                         <p class="mb-2">@(onePieceCard.Rarity ?? "Not detected")</p>
-                                         
-                                         <h6>Artist:</h6>
-                                         <p class="mb-2">@(onePieceCard.Artist ?? "Not detected")</p>
-                                     </div>
-                                 </div>
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectMainJapanese))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Main Effect (Japanese):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectMainJapanese</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectMainEnglish))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Main Effect (English):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectMainEnglish</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectCounterJapanese))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Counter Effect (Japanese):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectCounterJapanese</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectCounterEnglish))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Counter Effect (English):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectCounterEnglish</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectTriggerJapanese))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Trigger Effect (Japanese):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectTriggerJapanese</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.EffectTriggerEnglish))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Trigger Effect (English):</h6>
-                                         <p class="mb-2">@onePieceCard.EffectTriggerEnglish</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (onePieceCard.Traits?.Any() == true)
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Traits:</h6>
-                                         <p class="mb-2">@string.Join(", ", onePieceCard.Traits)</p>
-                                     </div>
-                                 }
-                                 
-                                 @if (onePieceCard.BoundingBoxes?.Any() == true)
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Text Regions:</h6>
-                                         <ul class="list-unstyled">
-                                             @foreach (var bbox in onePieceCard.BoundingBoxes)
-                                             {
-                                                 <li><small class="text-muted">@bbox.Label: (@bbox.X, @bbox.Y) - @bbox.Width×@bbox.Height</small></li>
-                                             }
-                                         </ul>
-                                     </div>
-                                 }
-                                 
-                                 @if (onePieceCard.Confidences != null)
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Confidence Scores:</h6>
-                                         <div class="row">
-                                             <div class="col-md-6">
-                                                 <small class="text-muted">
-                                                     Name: @(onePieceCard.Confidences.Name?.ToString("P0") ?? "N/A")<br/>
-                                                     Type: @(onePieceCard.Confidences.Type?.ToString("P0") ?? "N/A")<br/>
-                                                     Cost: @(onePieceCard.Confidences.Cost?.ToString("P0") ?? "N/A")<br/>
-                                                     Color: @(onePieceCard.Confidences.Color?.ToString("P0") ?? "N/A")
-                                                 </small>
-                                             </div>
-                                             <div class="col-md-6">
-                                                 <small class="text-muted">
-                                                     Effects: @(onePieceCard.Confidences.Effects?.ToString("P0") ?? "N/A")<br/>
-                                                     Set Code: @(onePieceCard.Confidences.SetCode?.ToString("P0") ?? "N/A")<br/>
-                                                     Collector #: @(onePieceCard.Confidences.CollectorNumber?.ToString("P0") ?? "N/A")<br/>
-                                                     Rarity: @(onePieceCard.Confidences.Rarity?.ToString("P0") ?? "N/A")
-                                                 </small>
-                                             </div>
-                                         </div>
-                                     </div>
-                                 }
-                                 
-                                 @if (!string.IsNullOrEmpty(onePieceCard.Notes))
-                                 {
-                                     <div class="mt-3">
-                                         <h6>Notes:</h6>
-                                         <p class="mb-2">@onePieceCard.Notes</p>
-                                     </div>
-                                 }
-                                 
-                                 <div class="mt-3">
-                                     <button type="button" class="btn btn-success" @onclick="SaveToLibrary">
-                                         <i class="bi bi-bookmark-plus"></i> Save to Library
-                                     </button>
-                                     <button type="button" class="btn btn-info ms-2" @onclick="ExportAsJson">
-                                         <i class="bi bi-download"></i> Export JSON
-                                     </button>
-                                 </div>
-                             </div>
-                         </div>
-                     }
-                     
-                     @if (translatedImageUrl != null)
-                     {
-                         <div class="mb-3">
-                             <label class="form-label">Translated Card Image</label>
-                             <div class="border rounded p-3 bg-success bg-opacity-10">
-                                 <div class="text-center">
-                                     <img src="@translatedImageUrl" alt="Translated Card" class="img-fluid" style="max-width: 100%; max-height: 400px;" />
-                                 </div>
-                                 <div class="mt-3 text-center">
-                                     <button type="button" class="btn btn-primary" @onclick="DownloadTranslatedImage">
-                                         <i class="bi bi-download"></i> Download Translated Image
-                                     </button>
-                                 </div>
-                             </div>
-                         </div>
-                     }
+                    <!-- File Preview -->
+                    @if (previewImageUrl != null)
+                    {
+                        <div class="mb-4">
+                            <label class="form-label">Image Preview</label>
+                            <div class="text-center">
+                                <img src="@previewImageUrl" alt="Preview" class="img-thumbnail" style="max-width: 300px; max-height: 300px;" />
+                            </div>
+                        </div>
+                        
+                        <!-- Process Button -->
+                        <div class="mb-4 text-center">
+                            <button type="button" class="btn btn-primary btn-lg" @onclick="ProcessCard" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Processing Card...</span>
+                                }
+                                else
+                                {
+                                    <span>🚀 Process Card</span>
+                                }
+                            </button>
+                        </div>
+                    }
                     
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-primary" @onclick="HandleFileUpload" disabled="@(isUploading || selectedFile == null)">
-                            @if (isUploading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span>Uploading...</span>
-                            }
-                            else
-                            {
-                                <span>Upload Image</span>
-                            }
+                    <!-- Processing Status -->
+                    @if (isProcessing)
+                    {
+                        <div class="alert alert-info">
+                            <h6>Processing in progress...</h6>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                            </div>
+                            <small class="text-muted">This may take a few moments. We're analyzing the card and generating a translated version.</small>
+                        </div>
+                    }
+                    
+                    <!-- Results Section -->
+                    @if (onePieceCard != null && translatedImageUrl != null)
+                    {
+                        <div class="mb-4">
+                            <div class="alert alert-success">
+                                <h6>✅ Card Processing Complete!</h6>
+                                <p class="mb-0">The card has been analyzed and translated successfully.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Accept & Store Button -->
+                        <div class="mb-4 text-center">
+                            <button type="button" class="btn btn-success btn-lg" @onclick="AcceptAndStoreCard" disabled="@isStoring">
+                                @if (isStoring)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Storing...</span>
+                                }
+                                else
+                                {
+                                    <span>💾 Accept & Store in Azure</span>
+                                }
+                            </button>
+                            <div class="mt-2">
+                                <small class="text-muted">This will save the card data and images to Azure Storage for future reference.</small>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Card Analysis Results -->
+                    @if (onePieceCard != null)
+                    {
+                        <div class="mb-4">
+                            <h5>📊 Card Analysis Results</h5>
+                            <div class="border rounded p-3 bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Card Name (JP):</h6>
+                                        <p class="mb-2 fw-bold">@(onePieceCard.NameJapanese ?? "Not detected")</p>
+                                        
+                                        <h6>Card Name (EN):</h6>
+                                        <p class="mb-2">@(onePieceCard.NameEnglish ?? "Not detected")</p>
+                                        
+                                        <h6>Card Type:</h6>
+                                        <p class="mb-2">@(onePieceCard.Type ?? "Not detected")</p>
+                                        
+                                        <h6>Color:</h6>
+                                        <p class="mb-2">@(onePieceCard.Color ?? "Not detected")</p>
+                                        
+                                        <h6>Power:</h6>
+                                        <p class="mb-2">@(onePieceCard.Power?.ToString() ?? "Not detected")</p>
+                                        
+                                        <h6>Cost:</h6>
+                                        <p class="mb-2">@(onePieceCard.Cost?.ToString() ?? "Not detected")</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Attribute:</h6>
+                                        <p class="mb-2">@(onePieceCard.Attribute ?? "Not detected")</p>
+                                        
+                                        <h6>Set Code:</h6>
+                                        <p class="mb-2">@(onePieceCard.SetCode ?? "Not detected")</p>
+                                        
+                                        <h6>Collector Number:</h6>
+                                        <p class="mb-2">@(onePieceCard.CollectorNumber ?? "Not detected")</p>
+                                        
+                                        <h6>Rarity:</h6>
+                                        <p class="mb-2">@(onePieceCard.Rarity ?? "Not detected")</p>
+                                        
+                                        <h6>Artist:</h6>
+                                        <p class="mb-2">@(onePieceCard.Artist ?? "Not detected")</p>
+                                    </div>
+                                </div>
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectMainJapanese))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Main Effect (Japanese):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectMainJapanese</p>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectMainEnglish))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Main Effect (English):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectMainEnglish</p>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectCounterJapanese))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Counter Effect (Japanese):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectCounterJapanese</p>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectCounterEnglish))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Counter Effect (English):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectCounterEnglish</p>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectTriggerJapanese))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Trigger Effect (Japanese):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectTriggerJapanese</p>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.EffectTriggerEnglish))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Trigger Effect (English):</h6>
+                                        <p class="mb-2">@onePieceCard.EffectTriggerEnglish</p>
+                                    </div>
+                                }
+                                
+                                @if (onePieceCard.Traits?.Any() == true)
+                                {
+                                    <div class="mt-3">
+                                        <h6>Traits:</h6>
+                                        <p class="mb-2">@string.Join(", ", onePieceCard.Traits)</p>
+                                    </div>
+                                }
+                                
+                                @if (onePieceCard.BoundingBoxes?.Any() == true)
+                                {
+                                    <div class="mt-3">
+                                        <h6>Text Regions:</h6>
+                                        <ul class="list-unstyled">
+                                            @foreach (var bbox in onePieceCard.BoundingBoxes)
+                                            {
+                                                <li><small class="text-muted">@bbox.Label: (@bbox.X, @bbox.Y) - @bbox.Width×@bbox.Height</small></li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                                
+                                @if (onePieceCard.Confidences != null)
+                                {
+                                    <div class="mt-3">
+                                        <h6>Confidence Scores:</h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    Name: @(onePieceCard.Confidences.Name?.ToString("P0") ?? "N/A")<br/>
+                                                    Type: @(onePieceCard.Confidences.Type?.ToString("P0") ?? "N/A")<br/>
+                                                    Cost: @(onePieceCard.Confidences.Cost?.ToString("P0") ?? "N/A")<br/>
+                                                    Color: @(onePieceCard.Confidences.Color?.ToString("P0") ?? "N/A")
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    Effects: @(onePieceCard.Confidences.Effects?.ToString("P0") ?? "N/A")<br/>
+                                                    Set Code: @(onePieceCard.Confidences.SetCode?.ToString("P0") ?? "N/A")<br/>
+                                                    Collector #: @(onePieceCard.Confidences.CollectorNumber?.ToString("P0") ?? "N/A")<br/>
+                                                    Rarity: @(onePieceCard.Confidences.Rarity?.ToString("P0") ?? "N/A")
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(onePieceCard.Notes))
+                                {
+                                    <div class="mt-3">
+                                        <h6>Notes:</h6>
+                                        <p class="mb-2">@onePieceCard.Notes</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Translated Image -->
+                    @if (translatedImageUrl != null)
+                    {
+                        <div class="mb-4">
+                            <h5>🔄 Translated Card Image</h5>
+                            <div class="border rounded p-3 bg-success bg-opacity-10">
+                                <div class="text-center">
+                                    <img src="@translatedImageUrl" alt="Translated Card" class="img-fluid" style="max-width: 100%; max-height: 500px;" />
+                                </div>
+                                <div class="mt-3 text-center">
+                                    <button type="button" class="btn btn-primary" @onclick="DownloadTranslatedImage">
+                                        <i class="bi bi-download"></i> Download Translated Image
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Azure Storage Information -->
+                    @if (cardMetadata != null)
+                    {
+                        <div class="mb-4">
+                            <h5>☁️ Azure Storage Information</h5>
+                            <div class="border rounded p-3 bg-info bg-opacity-10">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Storage Details:</h6>
+                                        <p class="mb-1"><small class="text-muted">Storage Account: @cardMetadata.StorageAccount</small></p>
+                                        <p class="mb-1"><small class="text-muted">Container: @cardMetadata.ContainerName</small></p>
+                                        <p class="mb-1"><small class="text-muted">Card ID: @cardMetadata.RowKey</small></p>
+                                        <p class="mb-1"><small class="text-muted">Stored: @cardMetadata.AnalysisDate.ToString("g")</small></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Image URLs:</h6>
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                <strong>Original:</strong><br/>
+                                                <a href="@cardMetadata.OriginalImageUrl" target="_blank" class="text-break">@cardMetadata.OriginalImageUrl</a>
+                                            </small>
+                                        </p>
+                                        <p class="mb-1">
+                                            <small class="text-muted">
+                                                <strong>Translated:</strong><br/>
+                                                <a href="@cardMetadata.TranslatedImageUrl" target="_blank" class="text-break">@cardMetadata.TranslatedImageUrl</a>
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-secondary" @onclick="ClearForm">
+                            <i class="bi bi-arrow-clockwise"></i> Process Another Card
                         </button>
-                        <button type="button" class="btn btn-secondary" @onclick="ClearForm">Clear</button>
-                    </div>
-                    
-                    <!-- Debug info -->
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            Selected file: @(selectedFile?.Name ?? "None") | 
-                            Button disabled: @(isUploading || selectedFile == null)
-                        </small>
+                        @if (onePieceCard != null)
+                        {
+                            <button type="button" class="btn btn-info" @onclick="ExportAsJson">
+                                <i class="bi bi-download"></i> Export JSON
+                            </button>
+                        }
                     </div>
                 </div>
             </div>
         </div>
         
+        <!-- Status Panel -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Upload Status</h6>
+                    <h6 class="mb-0">Status & Messages</h6>
                 </div>
                 <div class="card-body">
-                    @if (uploadMessage != null)
+                    @if (statusMessage != null)
                     {
                         <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show" role="alert">
-                            @uploadMessage
-                            <button type="button" class="btn-close" @onclick="() => uploadMessage = null"></button>
+                            @statusMessage
+                            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
                         </div>
                     }
                     
-                    @if (uploadedFiles.Any())
+                    @if (recentlyProcessedCards.Any())
                     {
-                        <h6>Recently Uploaded Files:</h6>
+                        <h6>Recently Processed Cards:</h6>
                         <ul class="list-unstyled">
-                            @foreach (var file in uploadedFiles.Take(5))
+                            @foreach (var card in recentlyProcessedCards.Take(5))
                             {
                                 <li class="mb-2">
-                                    <small class="text-muted">@file</small>
+                                    <small class="text-muted">
+                                        @(card.NameEnglish ?? card.NameJapanese ?? "Unknown Card") - @card.Timestamp.ToString("g")
+                                    </small>
                                 </li>
                             }
                         </ul>
@@ -313,16 +366,18 @@
             ");
         }
     }
+    
     private IBrowserFile? selectedFile;
     private string? previewImageUrl;
-    private bool isUploading;
-    private bool isAnalyzing;
-    private bool isAnalyzingAndTranslating;
-    private string? uploadMessage;
+    private bool isProcessing;
+    private bool isStoring;
+    private string? statusMessage;
     private bool isSuccess;
-    private readonly List<string> uploadedFiles = [];
+    private readonly List<OnePieceCard> recentlyProcessedCards = [];
     private OnePieceCard? onePieceCard;
     private string? translatedImageUrl;
+    private byte[]? originalImageBytes;
+    private CardMetadata? cardMetadata;
     
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -334,62 +389,94 @@
             if (selectedFile != null)
             {
                 const string format = "image/jpeg";
-                var resizedImage = await selectedFile.RequestImageFileAsync(format, 200, 200);
+                var resizedImage = await selectedFile.RequestImageFileAsync(format, 300, 300);
                 var buffer = new byte[resizedImage.Size];
                 await resizedImage.OpenReadStream().ReadAsync(buffer);
                 previewImageUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+                
+                // Store original image bytes for Azure storage
+                await using var originalStream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await originalStream.CopyToAsync(ms);
+                originalImageBytes = ms.ToArray();
             }
             
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            // Handle any errors during preview generation
             ShowMessage($"Error creating preview: {ex.Message}", false);
         }
     }
     
-    private async Task HandleFileUpload()
+    private async Task ProcessCard()
     {
         if (selectedFile == null)
         {
-            ShowMessage("Please select a file to upload.", false);
+            ShowMessage("Please select a file to process.", false);
             return;
         }
-        
+
         try
         {
-            isUploading = true;
+            isProcessing = true;
             StateHasChanged();
+
+            // Process the card with vision service (analysis + translation)
+            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var (cardData, translatedImage) = await OpenAIVisionService.AnalyzeAndTranslateCardAsync(stream);
             
-            // Create uploads directory if it doesn't exist
-            var uploadsPath = Path.Combine(Environment.WebRootPath, "uploads");
-            if (!Directory.Exists(uploadsPath))
-            {
-                Directory.CreateDirectory(uploadsPath);
-            }
+            // Set the results
+            onePieceCard = cardData;
+            translatedImageUrl = $"data:image/png;base64,{Convert.ToBase64String(translatedImage)}";
             
-            // Generate unique filename
-            var fileExtension = Path.GetExtension(selectedFile.Name);
-            var fileName = $"{Guid.NewGuid()}{fileExtension}";
-            var filePath = Path.Combine(uploadsPath, fileName);
+            // Add to recently processed
+            recentlyProcessedCards.Insert(0, cardData);
             
-            // Save file to disk
-            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
-            await using var fileStream = File.Create(filePath);
-            await stream.CopyToAsync(fileStream);
-            
-            uploadedFiles.Insert(0, fileName);
-            ShowMessage($"Image uploaded successfully! File saved as {fileName}", true);
-            ClearForm();
+            ShowMessage("Card processed successfully! You can now review the results and optionally store them in Azure.", true);
         }
         catch (Exception ex)
         {
-            ShowMessage($"Error uploading file: {ex.Message}", false);
+            ShowMessage($"Error processing card: {ex.Message}", false);
+            onePieceCard = null;
+            translatedImageUrl = null;
         }
         finally
         {
-            isUploading = false;
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task AcceptAndStoreCard()
+    {
+        if (selectedFile == null || originalImageBytes == null || onePieceCard == null)
+        {
+            ShowMessage("No card data to store.", false);
+            return;
+        }
+
+        try
+        {
+            isStoring = true;
+            StateHasChanged();
+
+            // Store the card using the processing service
+            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var (_, _, metadata) = await CardProcessingService.ProcessCardWithStorageAsync(stream, originalImageBytes);
+            
+            // Set the metadata
+            cardMetadata = metadata;
+            
+            ShowMessage("Card stored successfully in Azure! All data and images are now persisted.", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error storing card: {ex.Message}", false);
+        }
+        finally
+        {
+            isStoring = false;
             StateHasChanged();
         }
     }
@@ -398,121 +485,19 @@
     {
         selectedFile = null;
         previewImageUrl = null;
-        uploadMessage = null;
+        statusMessage = null;
         onePieceCard = null;
         translatedImageUrl = null;
+        originalImageBytes = null;
+        cardMetadata = null;
         StateHasChanged();
     }
     
     private void ShowMessage(string message, bool success)
     {
-        uploadMessage = message;
+        statusMessage = message;
         isSuccess = success;
         StateHasChanged();
-    }
-    
-    private async Task AnalyzeOnePieceCard()
-    {
-        if (selectedFile == null)
-        {
-            ShowMessage("Please select a file to analyze.", false);
-            return;
-        }
-        
-        try
-        {
-            isAnalyzing = true;
-            StateHasChanged();
-            
-            // Open the file stream and analyze it with OpenAI Vision
-            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            onePieceCard = await OpenAIVisionService.AnalyzeOnePieceCardAsync(stream);
-            
-            ShowMessage("OnePiece card analysis completed successfully!", true);
-        }
-        catch (Exception ex)
-        {
-            ShowMessage($"Error analyzing OnePiece card: {ex.Message}", false);
-            onePieceCard = null;
-        }
-        finally
-        {
-            isAnalyzing = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task AnalyzeAndTranslateCard()
-    {
-        if (selectedFile == null)
-        {
-            ShowMessage("Please select a file to analyze and translate.", false);
-            return;
-        }
-
-        try
-        {
-            isAnalyzingAndTranslating = true;
-            StateHasChanged();
-
-            // Open the file stream and analyze it with OpenAI Vision
-            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 768);
-            var (cardData, translatedImage) = await OpenAIVisionService.AnalyzeAndTranslateCardAsync(stream);
-            
-            // Set the card data
-            onePieceCard = cardData;
-            
-            // Convert the translated image bytes to a data URL for display
-            translatedImageUrl = $"data:image/png;base64,{Convert.ToBase64String(translatedImage)}";
-            
-            ShowMessage("OnePiece card analysis and translation completed successfully!", true);
-        }
-        catch (Exception ex)
-        {
-            ShowMessage($"Error analyzing and translating OnePiece card: {ex.Message}", false);
-            onePieceCard = null;
-            translatedImageUrl = null;
-        }
-        finally
-        {
-            isAnalyzingAndTranslating = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task SaveToLibrary()
-    {
-        if (onePieceCard == null)
-        {
-            ShowMessage("No card data to save.", false);
-            return;
-        }
-        
-        try
-        {
-            // Create library directory if it doesn't exist
-            var libraryPath = Path.Combine(Environment.WebRootPath, "library");
-            if (!Directory.Exists(libraryPath))
-            {
-                Directory.CreateDirectory(libraryPath);
-            }
-            
-            // Generate filename based on card name and timestamp
-            var cardName = onePieceCard.NameEnglish ?? onePieceCard.NameJapanese ?? "Unknown";
-            var safeCardName = string.Join("_", cardName.Split(Path.GetInvalidFileNameChars()));
-            var fileName = $"{safeCardName}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-            var filePath = Path.Combine(libraryPath, fileName);
-            
-            // Save card data as JSON
-            var jsonData = JsonSerializer.Serialize(onePieceCard, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(filePath, jsonData);
-            
-            ShowMessage($"Card saved to library as {fileName}", true);
-        }
-        catch (Exception ex)
-        {
-            ShowMessage($"Error saving card to library: {ex.Message}", false);
-        }
     }
     
     private async Task ExportAsJson()

@@ -14,8 +14,17 @@ builder.Services.AddRazorComponents()
 builder.Services.Configure<OpenAIOptions>(
     builder.Configuration.GetSection(OpenAIOptions.SectionName));
 
+builder.Services.Configure<AzureStorageOptions>(
+    builder.Configuration.GetSection(AzureStorageOptions.SectionName));
+
 // Add OpenAI Vision service
 builder.Services.AddScoped<IOpenAIVisionService, OpenAIVisionService>();
+
+// Add Azure Storage service
+builder.Services.AddScoped<IAzureStorageService, AzureStorageService>();
+
+// Add Card Processing service
+builder.Services.AddScoped<ICardProcessingService, CardProcessingService>();
 
 var app = builder.Build();
 
