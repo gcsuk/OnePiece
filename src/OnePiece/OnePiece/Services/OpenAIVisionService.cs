@@ -32,8 +32,8 @@ public class OpenAIVisionService : IOpenAIVisionService
                 imageStream.Position = 0;
             }
             
-            // 1. Downscale image to minimize costs (1024px max side, 85% quality)
-            using var downsizedJpeg = await DownscaleToJpegAsync(imageStream, 1024, 85);
+            // 1. Downscale image to minimize costs (800px max side, 80% quality for cost optimization)
+            using var downsizedJpeg = await DownscaleToJpegAsync(imageStream, 800, 80);
             
             // 2. Create optimized messages with strict JSON schema
             var messages = new List<Message>
@@ -248,7 +248,7 @@ public class OpenAIVisionService : IOpenAIVisionService
         string apiKey,
         string? promptOverride = null,
         byte[]? maskPng = null,             // PNG with transparent regions where text should be replaced
-        string size = "1024x1024",          // 256x256 | 512x512 | 1024x1024
+        string size = "512x512",            // 256x256 | 512x512 | 1024x1024 - Optimized for cost
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
