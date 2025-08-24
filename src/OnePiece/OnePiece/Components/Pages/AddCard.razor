@@ -38,7 +38,7 @@
                          </div>
                          
                          <div class="mb-3">
-                             <button type="button" class="btn btn-primary" @onclick="AnalyzeOnePieceCard" disabled="@isAnalyzing">
+                             <button type="button" class="btn btn-primary me-2" @onclick="AnalyzeOnePieceCard" disabled="@isAnalyzing">
                                  @if (isAnalyzing)
                                  {
                                      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -46,7 +46,19 @@
                                  }
                                  else
                                  {
-                                     <span>Analyze OnePiece Card</span>
+                                     <span>Analyze Card</span>
+                                 }
+                             </button>
+                             
+                             <button type="button" class="btn btn-success" @onclick="AnalyzeAndTranslateCard" disabled="@isAnalyzingAndTranslating">
+                                 @if (isAnalyzingAndTranslating)
+                                 {
+                                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                     <span>Analyzing & Translating...</span>
+                                 }
+                                 else
+                                 {
+                                     <span>Analyze & Translate</span>
                                  }
                              </button>
                          </div>
@@ -208,6 +220,23 @@
                              </div>
                          </div>
                      }
+                     
+                     @if (translatedImageUrl != null)
+                     {
+                         <div class="mb-3">
+                             <label class="form-label">Translated Card Image</label>
+                             <div class="border rounded p-3 bg-success bg-opacity-10">
+                                 <div class="text-center">
+                                     <img src="@translatedImageUrl" alt="Translated Card" class="img-fluid" style="max-width: 100%; max-height: 400px;" />
+                                 </div>
+                                 <div class="mt-3 text-center">
+                                     <button type="button" class="btn btn-primary" @onclick="DownloadTranslatedImage">
+                                         <i class="bi bi-download"></i> Download Translated Image
+                                     </button>
+                                 </div>
+                             </div>
+                         </div>
+                     }
                     
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-primary" @onclick="HandleFileUpload" disabled="@(isUploading || selectedFile == null)">
@@ -288,10 +317,12 @@
     private string? previewImageUrl;
     private bool isUploading;
     private bool isAnalyzing;
+    private bool isAnalyzingAndTranslating;
     private string? uploadMessage;
     private bool isSuccess;
     private readonly List<string> uploadedFiles = [];
     private OnePieceCard? onePieceCard;
+    private string? translatedImageUrl;
     
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
@@ -369,6 +400,7 @@
         previewImageUrl = null;
         uploadMessage = null;
         onePieceCard = null;
+        translatedImageUrl = null;
         StateHasChanged();
     }
     
@@ -406,6 +438,44 @@
         finally
         {
             isAnalyzing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AnalyzeAndTranslateCard()
+    {
+        if (selectedFile == null)
+        {
+            ShowMessage("Please select a file to analyze and translate.", false);
+            return;
+        }
+
+        try
+        {
+            isAnalyzingAndTranslating = true;
+            StateHasChanged();
+
+            // Open the file stream and analyze it with OpenAI Vision
+            await using var stream = selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 768);
+            var (cardData, translatedImage) = await OpenAIVisionService.AnalyzeAndTranslateCardAsync(stream);
+            
+            // Set the card data
+            onePieceCard = cardData;
+            
+            // Convert the translated image bytes to a data URL for display
+            translatedImageUrl = $"data:image/png;base64,{Convert.ToBase64String(translatedImage)}";
+            
+            ShowMessage("OnePiece card analysis and translation completed successfully!", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error analyzing and translating OnePiece card: {ex.Message}", false);
+            onePieceCard = null;
+            translatedImageUrl = null;
+        }
+        finally
+        {
+            isAnalyzingAndTranslating = false;
             StateHasChanged();
         }
     }
@@ -473,6 +543,40 @@
         catch (Exception ex)
         {
             ShowMessage($"Error exporting card data: {ex.Message}", false);
+        }
+    }
+
+    private async Task DownloadTranslatedImage()
+    {
+        if (translatedImageUrl == null)
+        {
+            ShowMessage("No translated image to download.", false);
+            return;
+        }
+        
+        try
+        {
+            // Extract the base64 data from the data URL
+            var base64Data = translatedImageUrl.Split(',')[1];
+            var imageBytes = Convert.FromBase64String(base64Data);
+            
+            // Generate filename
+            var cardName = onePieceCard?.NameEnglish ?? onePieceCard?.NameJapanese ?? "Unknown";
+            var safeCardName = string.Join("_", cardName.Split(Path.GetInvalidFileNameChars()));
+            var fileName = $"{safeCardName}_translated_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            
+            // Create download link
+            var base64 = Convert.ToBase64String(imageBytes);
+            var dataUrl = $"data:image/png;base64,{base64}";
+            
+            // Trigger download using JavaScript
+            await JS.InvokeVoidAsync("downloadFile", dataUrl, fileName);
+            
+            ShowMessage("Translated image downloaded successfully!", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error downloading translated image: {ex.Message}", false);
         }
     }
 }
