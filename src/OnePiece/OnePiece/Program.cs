@@ -1,4 +1,3 @@
-using OnePiece.Client.Pages;
 using OnePiece.Components;
 using OnePiece.Services;
 using OnePiece.Configuration;
