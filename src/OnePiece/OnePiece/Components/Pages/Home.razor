@@ -111,8 +111,8 @@
                             <div class="col">
                                 <div class="card h-100 shadow-sm">
                                     <div class="card-header p-2 text-center">
-                                        <h6 class="mb-0 text-truncate" title="@card.CardName">
-                                            @card.CardName
+                                        <h6 class="mb-0 text-truncate" title="@card.CardNameEnglish">
+                                            @card.CardNameEnglish
                                         </h6>
                                     </div>
                                     <div class="card-body p-2">
@@ -155,6 +155,11 @@
                                                 <span class="badge bg-success">@card.Power</span>
                                             </div>
                                         }
+                                        <div class="text-center mt-2">
+                                            <a href="/card/@card.RowKey" class="btn btn-sm btn-outline-primary">
+                                                View Details
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -167,18 +172,18 @@
                         <table class="table table-hover">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>Card Images</th>
-                                    <th>Card Details</th>
+                                    <th style="width: 200px;">Card Images</th>
+                                    <th>Card Name</th>
+                                    <th>Type & Color</th>
                                     <th>Game Stats</th>
-                                    <th>Collection Info</th>
-                                    <th>Analysis Info</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var card in filteredCards)
                                 {
                                     <tr>
-                                        <td style="width: 200px;">
+                                        <td>
                                             <div class="row g-2">
                                                 <div class="col-6">
                                                     <div class="text-center">
@@ -197,19 +202,21 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="fw-bold">@card.CardName</div>
-                                            @if (!string.IsNullOrEmpty(card.CardNameJapanese) && card.CardNameJapanese != card.CardName)
+                                            <div class="fw-bold">@card.CardNameEnglish</div>
+                                            @if (!string.IsNullOrEmpty(card.CardNameJapanese) && card.CardNameJapanese != card.CardNameEnglish)
                                             {
                                                 <div class="text-muted small">@card.CardNameJapanese</div>
                                             }
-                                            <div class="mt-2">
+                                        </td>
+                                        <td>
+                                            <div class="mb-2">
                                                 <span class="badge bg-secondary me-1">@card.CardType</span>
                                                 <span class="badge bg-@GetColorClass(card.Color)">@card.Color</span>
-                                                @if (!string.IsNullOrEmpty(card.Rarity))
-                                                {
-                                                    <span class="badge bg-warning">@card.Rarity</span>
-                                                }
                                             </div>
+                                            @if (!string.IsNullOrEmpty(card.Rarity))
+                                            {
+                                                <span class="badge bg-warning">@card.Rarity</span>
+                                            }
                                         </td>
                                         <td>
                                             <div class="row g-2">
@@ -224,21 +231,9 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="small">
-                                                <div><strong>Set:</strong> @(string.IsNullOrEmpty(card.SetCode) ? "-" : card.SetCode)</div>
-                                                <div><strong>Number:</strong> @(string.IsNullOrEmpty(card.CollectorNumber) ? "-" : card.CollectorNumber)</div>
-                                                <div><strong>Added:</strong> @card.AnalysisDate.ToString("MMM dd, yyyy")</div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="small">
-                                                <div><strong>Method:</strong> @(string.IsNullOrEmpty(card.AnalysisMethod) ? "-" : card.AnalysisMethod)</div>
-                                                @if (card.Confidence.HasValue)
-                                                {
-                                                    <div><strong>Confidence:</strong> @(card.Confidence.Value.ToString("P0"))</div>
-                                                }
-                                                <div><strong>ID:</strong> <code class="small">@card.RowKey[..8]...</code></div>
-                                            </div>
+                                            <a href="/card/@card.RowKey" class="btn btn-primary btn-sm">
+                                                View Details
+                                            </a>
                                         </td>
                                     </tr>
                                 }
@@ -307,9 +302,8 @@
         {
             var searchLower = searchTerm.ToLowerInvariant();
             query = query.Where(c => 
-                (!string.IsNullOrEmpty(c.CardName) && c.CardName.ToLowerInvariant().Contains(searchLower)) ||
-                (!string.IsNullOrEmpty(c.CardNameJapanese) && c.CardNameJapanese.ToLowerInvariant().Contains(searchLower)) ||
                 (!string.IsNullOrEmpty(c.CardNameEnglish) && c.CardNameEnglish.ToLowerInvariant().Contains(searchLower)) ||
+                (!string.IsNullOrEmpty(c.CardNameJapanese) && c.CardNameJapanese.ToLowerInvariant().Contains(searchLower)) ||
                 (!string.IsNullOrEmpty(c.CardType) && c.CardType.ToLowerInvariant().Contains(searchLower)) ||
                 (!string.IsNullOrEmpty(c.Color) && c.Color.ToLowerInvariant().Contains(searchLower)) ||
                 (!string.IsNullOrEmpty(c.Rarity) && c.Rarity.ToLowerInvariant().Contains(searchLower))

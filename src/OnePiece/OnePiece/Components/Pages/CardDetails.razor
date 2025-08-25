@@ -1,0 +1,430 @@
+@page "/card/{CardId}"
+@using OnePiece.Services
+@using OnePiece.Models
+@inject IAzureStorageService AzureStorageService
+@inject NavigationManager Navigation
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
+<PageTitle>Card Details - @(card?.CardNameEnglish ?? "Loading...")</PageTitle>
+
+<div class="container-fluid mt-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading card details...</p>
+        </div>
+    }
+    else if (card == null)
+    {
+        <div class="text-center py-5">
+            <div class="text-muted">
+                <i class="bi bi-exclamation-triangle" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">Card Not Found</h3>
+                <p class="lead">The requested card could not be found in the library.</p>
+                <a href="/" class="btn btn-primary btn-lg">Back to Library</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/">🏴‍☠️ Library</a></li>
+                                <li class="breadcrumb-item active">@card.CardNameEnglish</li>
+                            </ol>
+                        </nav>
+                        <h1>@card.CardNameEnglish</h1>
+                        @if (!string.IsNullOrEmpty(card.CardNameJapanese) && card.CardNameJapanese != card.CardNameEnglish)
+                        {
+                            <p class="text-muted h5">@card.CardNameJapanese</p>
+                        }
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/" class="btn btn-secondary">
+                            ← Back to Library
+                        </a>
+                        <a href="/addcard" class="btn btn-success">
+                            ➕ Add New Card
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Card Images Section -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">🖼️ Card Images</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <h6 class="text-muted mb-2">Japanese (Original)</h6>
+                                            <img src="@card.OriginalImageUrl" alt="Japanese Card" 
+                                                 class="img-fluid rounded shadow" style="max-height: 300px; width: 100%; object-fit: contain;" />
+                                            <div class="mt-2">
+                                                <a href="@card.OriginalImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Open Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <h6 class="text-muted mb-2">English (Translated)</h6>
+                                            <img src="@card.TranslatedImageUrl" alt="English Card" 
+                                                 class="img-fluid rounded shadow" style="max-height: 300px; width: 100%; object-fit: contain;" />
+                                            <div class="mt-2">
+                                                <a href="@card.TranslatedImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Open Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Information Section -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">📋 Card Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Card Type</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <span class="badge bg-secondary fs-6">@card.CardType</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Color</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <span class="badge bg-@GetColorClass(card.Color) fs-6">@card.Color</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Cost</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (card.Cost.HasValue)
+                                            {
+                                                <span class="badge bg-info fs-6">@card.Cost</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Power</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (card.Power.HasValue)
+                                            {
+                                                <span class="badge bg-success fs-6">@card.Power</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Rarity</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.Rarity))
+                                            {
+                                                <span class="badge bg-warning fs-6">@card.Rarity</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Card Name (Japanese)</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.CardNameJapanese))
+                                            {
+                                                <span>@card.CardNameJapanese</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Collection Information -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">🏷️ Collection Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Set Code</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.SetCode))
+                                            {
+                                                <code>@card.SetCode</code>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Collector Number</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.CollectorNumber))
+                                            {
+                                                <code>@card.CollectorNumber</code>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Primary Card Name</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.CardName))
+                                            {
+                                                <span>@card.CardName</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Added to Library</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <span>@card.AnalysisDate.ToString("MMMM dd, yyyy 'at' HH:mm")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Information -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">🔬 Analysis Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Analysis Method</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (!string.IsNullOrEmpty(card.AnalysisMethod))
+                                            {
+                                                <span>@card.AnalysisMethod</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not specified</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Confidence Score</label>
+                                        <div class="p-2 bg-light rounded">
+                                            @if (card.Confidence.HasValue)
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@(card.Confidence.Value.ToString("P0"))</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar @GetConfidenceColor(card.Confidence.Value)" 
+                                                             style="width: @(card.Confidence.Value * 100)%"></div>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not available</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Storage Account</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <code class="small">@card.StorageAccount</code>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Container</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <code class="small">@card.ContainerName</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Details -->
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">⚙️ Technical Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Card ID</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <code class="small">@card.RowKey</code>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Partition Key</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <code class="small">@card.PartitionKey</code>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Last Modified</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <span>@(card.Timestamp?.ToString("MMMM dd, yyyy 'at' HH:mm:ss") ?? "Unknown")</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">ETag</label>
+                                        <div class="p-2 bg-light rounded">
+                                            <code class="small">@card.ETag</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="/" class="btn btn-secondary btn-lg">
+                                ← Back to Library
+                            </a>
+                            <a href="/addcard" class="btn btn-success btn-lg">
+                                ➕ Add New Card
+                            </a>
+                            @if (!string.IsNullOrEmpty(card.OriginalImageUrl))
+                            {
+                                <a href="@card.OriginalImageUrl" target="_blank" class="btn btn-outline-primary btn-lg">
+                                    📥 Download Japanese Image
+                                </a>
+                            }
+                            @if (!string.IsNullOrEmpty(card.TranslatedImageUrl))
+                            {
+                                <a href="@card.TranslatedImageUrl" target="_blank" class="btn btn-outline-primary btn-lg">
+                                    📥 Download English Image
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string CardId { get; set; } = string.Empty;
+
+    private CardMetadata? card;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(CardId))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadCardDetailsAsync();
+    }
+
+    private async Task LoadCardDetailsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            card = await AzureStorageService.GetCardMetadataAsync(CardId);
+            
+            if (card == null)
+            {
+                // Card not found, stay on loading state and show error message
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error - you might want to show a user-friendly error message
+            Console.WriteLine($"Error loading card details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetColorClass(string color)
+    {
+        return color?.ToLowerInvariant() switch
+        {
+            "red" => "danger",
+            "blue" => "primary",
+            "green" => "success",
+            "purple" => "purple",
+            "black" => "dark",
+            "yellow" => "warning",
+            _ => "secondary"
+        };
+    }
+
+    private string GetConfidenceColor(double confidence)
+    {
+        return confidence switch
+        {
+            >= 0.8 => "success",
+            >= 0.6 => "warning",
+            >= 0.4 => "info",
+            _ => "danger"
+        };
+    }
+}
