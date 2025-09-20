@@ -32,31 +32,31 @@ public class OpenAIVisionService : IOpenAIVisionService
                 imageStream.Position = 0;
             }
             
-            // 1. Downscale image to minimize costs (800px max side, 80% quality for cost optimization)
-            using var downsizedJpeg = await DownscaleToJpegAsync(imageStream, 800, 80);
+            // 1. Downscale image to minimize costs (600px max side, 70% quality for cost optimization)
+            using var downsizedJpeg = await DownscaleToJpegAsync(imageStream, 600, 70);
             
-            // 2. Create optimized messages with strict JSON schema
+            // 2. Create optimized messages with minimal token usage
             var messages = new List<Message>
             {
-                new(Role.System, CreateSystemPrompt()),
+                new(Role.System, CreateOptimizedSystemPrompt()),
                 new(Role.User, new List<Content>
                 {
-                    new(ContentType.Text, CreateUserPrompt()),
+                    new(ContentType.Text, CreateOptimizedUserPrompt()),
                     new(ContentType.ImageUrl, $"data:image/jpeg;base64,{Convert.ToBase64String(downsizedJpeg.ToArray())}")
                 })
             };
 
-            // 3. Create chat completion options with strict JSON schema
+            // 3. Create chat completion options with strict JSON schema and lower token limits
             var chatRequest = new ChatRequest(
                 messages: messages,
                 model: _options.Model,
-                maxTokens: _options.MaxTokens,
-                temperature: 0.2f,
+                maxTokens: 300, // Reduced from 500
+                temperature: 0.1f, // Lower temperature for more consistent results
                 responseFormat: TextResponseFormat.JsonSchema
             );
 
             // Debug: Log the request (remove in production)
-            Console.WriteLine($"OpenAI API Request - Model: {_options.Model}, MaxTokens: {_options.MaxTokens}");
+            Console.WriteLine($"OpenAI API Request - Model: {_options.Model}, MaxTokens: 300, ImageSize: 600px");
 
             // 4. Get completion directly
             var completion = await _openAIClient.ChatEndpoint.GetCompletionAsync(chatRequest);
@@ -104,7 +104,7 @@ public class OpenAIVisionService : IOpenAIVisionService
             // Reset stream position for image generation
             memoryStream.Position = 0;
             
-            // Generate the translated image
+            // Generate the translated image with optimized settings
             var translatedImage = await CreateEnglishOverlayImageAsync(memoryStream, cardData);
             
             return (cardData, translatedImage);
@@ -130,7 +130,8 @@ public class OpenAIVisionService : IOpenAIVisionService
             bytes = ms.ToArray();
         }
 
-        return await TranslateCardToEnglishAsync(bytes, "image/jpeg", _options.ApiKey, size: "auto");
+        // Use smaller image size for cost optimization
+        return await TranslateCardToEnglishAsync(bytes, "image/jpeg", _options.ApiKey, size: "512x512");
     }
 
     private static async Task<MemoryStream> DownscaleToJpegAsync(Stream imageStream, int maxSide, int quality)
@@ -158,97 +159,61 @@ public class OpenAIVisionService : IOpenAIVisionService
         return ms;
     }
 
-    private static string CreateSystemPrompt() =>
+    // Optimized system prompt - reduced from ~200 tokens to ~80 tokens
+    private static string CreateOptimizedSystemPrompt() =>
         """
-        You are an expert OnePiece card collector and analyst. Analyze this image of a OnePiece trading card and extract all relevant information.
-
-        Please provide a detailed analysis in the following JSON format, filling in as many fields as you can identify from the image:
-
-        {
-          "cardName": "The official name of the card",
-          "characterName": "The name of the OnePiece character featured on the card",
-          "cardType": "Type of card (e.g., Character, Event, Stage, Leader, etc.)",
-          "rarity": "Card rarity (e.g., Common, Uncommon, Rare, Super Rare, Secret Rare, etc.)",
-          "power": "Power/attack value if shown",
-          "cost": "Cost to play the card if shown",
-          "attribute": "Card attribute (e.g., Red, Blue, Green, Purple, Black, etc.)",
-          "cardNumber": "Card number in the set",
-          "setName": "Name of the card set/expansion",
-          "cardText": "Full card text/effect in Japanese",
-          "cardTextEnglish": "English translation of the card text if you can provide it",
-          "artworkDescription": "Description of the card artwork and character pose",
-          "series": "OnePiece series/arc this card represents",
-          "releaseDate": "Release date if visible",
-          "collectorNumber": "Collector number or other identifying numbers",
-          "condition": "Card condition if visible (e.g., Mint, Near Mint, etc.)",
-          "estimatedValue": "Estimated market value if you can determine it",
-          "notes": "Any additional observations or notes about the card",
-          "confidence": 0.95
-        }
-
-        Important guidelines:
-        1. If you cannot read certain text clearly, mark it as "Not visible" or "Unclear"
-        2. For Japanese text you can read, provide the exact characters
-        3. For card text, try to capture the complete effect text
-        4. Be specific about card types and attributes
-        5. If this appears to be a specific OnePiece card game (like OnePiece TCG), note that in your analysis
-        6. Set confidence to 0.95 if you're very certain, lower if you're less certain about some elements
-
-        Analyze the image carefully and provide the most accurate and complete information possible.
+        Analyze this OnePiece trading card image. Extract card details in JSON format.
+        
+        Guidelines:
+        - Read Japanese text accurately
+        - Identify card type, color, cost, power, rarity
+        - Capture effect text completely
+        - Set confidence scores (0.0-1.0)
+        - Return valid JSON only
         """;
 
-    private static string CreateUserPrompt() =>
+    // Optimized user prompt - reduced from ~150 tokens to ~60 tokens
+    private static string CreateOptimizedUserPrompt() =>
         """
-        Extract all visible details from the attached image and output ONLY a single valid JSON object conforming to the SCHEMA.
-        Keep line breaks in rules text as \n; normalize whitespace; no extra keys, no comments, no markdown.
-        IMPORTANT: Return ONLY the JSON object, no additional text, no explanations.
-
-        SCHEMA:
+        Extract card details. Return ONLY valid JSON matching this schema:
+        
         {
-          "name_jp": "string or null",
-          "name_en": "string or null",
-          "type": "Event or Character or Leader or Stage or null",
-          "color": "Red or Green or Blue or Purple or Black or Yellow or Dual or Unknown or null",
-          "cost": "number or null",
-          "power": "number or null",
-          "attribute": "Slash or Strike or Special or Ranged or Wisdom or Unknown or null",
-          "traits": ["string"] or null,
-          "effect_main_jp": "string or null",
-          "effect_main_en": "string or null",
-          "effect_counter_jp": "string or null",
-          "effect_counter_en": "string or null",
-          "effect_trigger_jp": "string or null",
-          "effect_trigger_en": "string or null",
-          "set_code": "string or null",
-          "collector_number": "string or null",
-          "rarity": "C or U or R or SR or L or SEC or P or SP or Unknown or null",
-          "artist": "string or null",
-          "copyright_footer": "string or null",
-          "notes": "string or null",
-          "bbox_text_regions": [
-             {"label":"name","x":0,"y":0,"w":0,"h":0},
-             {"label":"main_text","x":0,"y":0,"w":0,"h":0}
-          ] or null,
+          "name_jp": "string|null",
+          "name_en": "string|null", 
+          "type": "Event|Character|Leader|Stage|null",
+          "color": "Red|Green|Blue|Purple|Black|Yellow|null",
+          "cost": "number|null",
+          "power": "number|null",
+          "attribute": "Slash|Strike|Special|Ranged|Wisdom|null",
+          "traits": ["string"]|null,
+          "effect_main_jp": "string|null",
+          "effect_main_en": "string|null",
+          "effect_counter_jp": "string|null", 
+          "effect_counter_en": "string|null",
+          "effect_trigger_jp": "string|null",
+          "effect_trigger_en": "string|null",
+          "set_code": "string|null",
+          "collector_number": "string|null",
+          "rarity": "C|U|R|SR|L|SEC|P|SP|null",
+          "artist": "string|null",
+          "notes": "string|null",
           "confidences": {
-            "name": "number or null",
-            "type": "number or null",
-            "cost": "number or null",
-            "color": "number or null",
-            "effects": "number or null",
-            "set_code": "number or null",
-            "collector_number": "number or null",
-            "rarity": "number or null"
+            "name": "number|null",
+            "type": "number|null", 
+            "cost": "number|null",
+            "color": "number|null",
+            "effects": "number|null"
           }
         }
         """;
 
     public static async Task<byte[]> TranslateCardToEnglishAsync(
         byte[] imageBytes,
-        string imageMime,                   // "image/png" or "image/jpeg"
+        string imageMime,
         string apiKey,
         string? promptOverride = null,
-        byte[]? maskPng = null,             // PNG with transparent regions where text should be replaced
-        string size = "512x512",            // 256x256 | 512x512 | 1024x1024 - Optimized for cost
+        byte[]? maskPng = null,
+        string size = "512x512", // Default to 512x512 for cost optimization
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -258,11 +223,9 @@ public class OpenAIVisionService : IOpenAIVisionService
         http.BaseAddress = new Uri("https://api.openai.com/v1/");
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        // Use a focused, deterministic prompt
+        // Optimized, concise prompt
         var prompt = promptOverride ??
-            "Replace all Japanese text in this trading card with accurate English equivalents. " +
-            "Preserve original layout, borders, art, icons, symbols, and costs. " +
-            "Use clean, readable typography and align text to existing boxes.";
+            "Replace Japanese text with English. Preserve layout, art, icons, costs.";
 
         using var form = new MultipartFormDataContent
         {
@@ -271,13 +234,13 @@ public class OpenAIVisionService : IOpenAIVisionService
             { new StringContent(size), "size" }
         };
 
-        // Image part (honor the actual MIME)
+        // Image part
         var img = new ByteArrayContent(imageBytes);
         img.Headers.ContentType = new MediaTypeHeaderValue(imageMime);
         var imgFileName = imageMime == "image/png" ? "card.png" : "card.jpg";
         form.Add(img, "image", imgFileName);
 
-        // Optional mask (must be PNG; transparent where text should be replaced)
+        // Optional mask
         if (maskPng is not null)
         {
             var mask = new ByteArrayContent(maskPng);
