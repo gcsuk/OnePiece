@@ -8,4 +8,5 @@ public interface IAzureStorageService
     Task<CardMetadata> StoreCardMetadataAsync(OnePieceCard cardData, string originalImageUrl, string translatedImageUrl);
     Task<List<CardMetadata>> GetAllCardMetadataAsync();
     Task<CardMetadata?> GetCardMetadataAsync(string cardId);
+    Task<CardMetadata> UpdateCardMetadataAsync(CardMetadata cardMetadata);
 }

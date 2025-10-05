@@ -1,0 +1,24 @@
+/* Home page specific styles */
+.home-cover-image {
+    max-width: 100%;
+    height: auto;
+    transition: transform 0.3s ease;
+}
+
+.home-cover-image:hover {
+    transform: scale(1.02);
+}
+
+/* Shrink image by 50% on desktop screens */
+@media (min-width: 992px) {
+    .home-cover-image {
+        max-width: 50%;
+    }
+}
+
+/* Keep full size on mobile and tablet */
+@media (max-width: 991px) {
+    .home-cover-image {
+        max-width: 100%;
+    }
+}

@@ -158,4 +158,20 @@ public class AzureStorageService : IAzureStorageService
             throw new InvalidOperationException($"Failed to retrieve card metadata from Azure Table Storage: {ex.Message}", ex);
         }
     }
+
+    public async Task<CardMetadata> UpdateCardMetadataAsync(CardMetadata cardMetadata)
+    {
+        try
+        {
+            // Update the timestamp to reflect the modification
+            cardMetadata.Timestamp = DateTimeOffset.UtcNow;
+            
+            await _tableClient.UpdateEntityAsync(cardMetadata, cardMetadata.ETag);
+            return cardMetadata;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to update card metadata in Azure Table Storage: {ex.Message}", ex);
+        }
+    }
 }
