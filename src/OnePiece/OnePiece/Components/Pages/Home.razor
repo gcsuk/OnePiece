@@ -1,341 +1,100 @@
-﻿@page "/"
-@using OnePiece.Services
-@using OnePiece.Models
-@inject IAzureStorageService AzureStorageService
-@attribute [StreamRendering]
-@rendermode InteractiveServer
+@page "/"
 
 <PageTitle>OnePiece Card Library</PageTitle>
 
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>🏴‍☠️ OnePiece Card Library</h1>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" @onclick="RefreshLibrary" disabled="@isLoading">
-                        @if (isLoading)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Loading...</span>
-                        }
-                        else
-                        {
-                            <span>🔄 Refresh Library</span>
-                        }
-                    </button>
-                    <a href="/addcard" class="btn btn-success">
-                        ➕ Add New Card
-                    </a>
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div class="text-center py-5">
+                <!-- Main OnePiece Cover Image -->
+                <div class="mb-5">
+                    <img src="https://stonepiece.blob.core.windows.net/general/OnePieceCover.png" 
+                         alt="OnePiece Card Library" 
+                         class="img-fluid rounded shadow-lg" 
+                         style="max-width: 100%; height: auto;" />
+                </div>
+
+                <!-- Welcome Message -->
+                <div class="mb-5">
+                    <h1 class="display-4 fw-bold text-primary mb-3">🏴‍☠️ OnePiece Card Library</h1>
+                    <p class="lead text-muted">Welcome to your digital OnePiece card collection! Manage, view, and play with your cards.</p>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="row g-4 justify-content-center">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-collection display-4 text-primary"></i>
+                                </div>
+                                <h5 class="card-title">View Cards</h5>
+                                <p class="card-text text-muted">Browse your complete card collection with search and filter options.</p>
+                                <a href="/cards" class="btn btn-primary btn-lg w-100">
+                                    <i class="bi bi-collection me-2"></i>Card List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-plus-square display-4 text-success"></i>
+                                </div>
+                                <h5 class="card-title">Add Card</h5>
+                                <p class="card-text text-muted">Upload and process new OnePiece cards to your collection.</p>
+                                <a href="/addcard" class="btn btn-success btn-lg w-100">
+                                    <i class="bi bi-plus-square me-2"></i>Add New Card
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-controller display-4 text-warning"></i>
+                                </div>
+                                <h5 class="card-title">Play Game</h5>
+                                <p class="card-text text-muted">Play with your cards in an interactive game mode.</p>
+                                <a href="/play" class="btn btn-warning btn-lg w-100">
+                                    <i class="bi bi-controller me-2"></i>Play
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Info Section -->
+                <div class="mt-5 pt-5 border-top">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-search display-6 text-info mb-3"></i>
+                                <h6>Smart Search</h6>
+                                <p class="text-muted small">Find cards quickly with advanced search and filtering options.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-cloud-upload display-6 text-primary mb-3"></i>
+                                <h6>Easy Upload</h6>
+                                <p class="text-muted small">Upload card images and let AI automatically extract card information.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-grid display-6 text-success mb-3"></i>
+                                <h6>Organized View</h6>
+                                <p class="text-muted small">View your cards in grid or list format with detailed information.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            @if (isLoading)
-            {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-3 text-muted">Loading your OnePiece card collection...</p>
-                </div>
-            }
-            else if (storedCards == null || !storedCards.Any())
-            {
-                <div class="text-center py-5">
-                    <div class="text-muted">
-                        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
-                        <h3 class="mt-3">No Cards Found</h3>
-                        <p class="lead">Your OnePiece card library is empty.</p>
-                        <a href="/addcard" class="btn btn-primary btn-lg">Add Your First Card</a>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text">🔍</span>
-                            <input type="text" class="form-control" placeholder="Search cards by name, type, color..." 
-                                   @bind="searchTerm" @bind:event="oninput" />
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="filterType">
-                            <option value="">All Types</option>
-                            <option value="Leader">Leader</option>
-                            <option value="Character">Character</option>
-                            <option value="Event">Event</option>
-                            <option value="Stage">Stage</option>
-                            <option value="Don!!">Don!!</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="filterColor">
-                            <option value="">All Colors</option>
-                            <option value="Red">Red</option>
-                            <option value="Blue">Blue</option>
-                            <option value="Green">Green</option>
-                            <option value="Purple">Purple</option>
-                            <option value="Black">Black</option>
-                            <option value="Yellow">Yellow</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <p class="text-muted mb-0">
-                                Showing @filteredCards.Count() of @storedCards.Count cards
-                            </p>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn @(viewMode == "grid" ? "btn-primary" : "btn-outline-primary")" 
-                                        @onclick='() => viewMode = "grid"'>
-                                    <i class="bi bi-grid-3x3-gap"></i> Grid
-                                </button>
-                                <button type="button" class="btn @(viewMode == "list" ? "btn-primary" : "btn-outline-primary")" 
-                                        @onclick='() => viewMode = "list"'>
-                                    <i class="bi bi-list-ul"></i> List
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                @if (viewMode == "grid")
-                {
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
-                        @foreach (var card in filteredCards)
-                        {
-                            <div class="col">
-                                <div class="card h-100 shadow-sm">
-                                    <div class="card-header p-2 text-center">
-                                        <h6 class="mb-0 text-truncate" title="@card.CardNameEnglish">
-                                            @card.CardNameEnglish
-                                        </h6>
-                                    </div>
-                                    <div class="card-body p-2">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <div class="text-center">
-                                                    <small class="text-muted d-block mb-1">Japanese</small>
-                                                    <img src="@card.OriginalImageUrl" alt="Japanese Card" 
-                                                         class="img-fluid rounded" style="max-height: 150px; width: 100%; object-fit: contain;" />
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="text-center">
-                                                    <small class="text-muted d-block mb-1">English</small>
-                                                    <img src="@card.TranslatedImageUrl" alt="English Card" 
-                                                         class="img-fluid rounded" style="max-height: 150px; width: 100%; object-fit: contain;" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-footer p-2">
-                                        <div class="row text-center g-1">
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Type</small>
-                                                <span class="badge bg-secondary">@card.CardType</span>
-                                            </div>
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Color</small>
-                                                <span class="badge bg-@GetColorClass(card.Color)">@card.Color</span>
-                                            </div>
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Cost</small>
-                                                <span class="badge bg-info">@(card.Cost?.ToString() ?? "-")</span>
-                                            </div>
-                                        </div>
-                                        @if (card.Power.HasValue)
-                                        {
-                                            <div class="text-center mt-2">
-                                                <small class="text-muted">Power: </small>
-                                                <span class="badge bg-success">@card.Power</span>
-                                            </div>
-                                        }
-                                        <div class="text-center mt-2">
-                                            <a href="/card/@card.RowKey" class="btn btn-sm btn-outline-primary">
-                                                View Details
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th style="width: 200px;">Card Images</th>
-                                    <th>Card Name</th>
-                                    <th>Type & Color</th>
-                                    <th>Game Stats</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var card in filteredCards)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="row g-2">
-                                                <div class="col-6">
-                                                    <div class="text-center">
-                                                        <small class="text-muted d-block mb-1">Japanese</small>
-                                                        <img src="@card.OriginalImageUrl" alt="Japanese Card" 
-                                                             class="img-fluid rounded" style="max-height: 120px; width: 100%; object-fit: contain;" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="text-center">
-                                                        <small class="text-muted d-block mb-1">English</small>
-                                                        <img src="@card.TranslatedImageUrl" alt="English Card" 
-                                                             class="img-fluid rounded" style="max-height: 120px; width: 100%; object-fit: contain;" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold">@card.CardNameEnglish</div>
-                                            @if (!string.IsNullOrEmpty(card.CardNameJapanese) && card.CardNameJapanese != card.CardNameEnglish)
-                                            {
-                                                <div class="text-muted small">@card.CardNameJapanese</div>
-                                            }
-                                        </td>
-                                        <td>
-                                            <div class="mb-2">
-                                                <span class="badge bg-secondary me-1">@card.CardType</span>
-                                                <span class="badge bg-@GetColorClass(card.Color)">@card.Color</span>
-                                            </div>
-                                            @if (!string.IsNullOrEmpty(card.Rarity))
-                                            {
-                                                <span class="badge bg-warning">@card.Rarity</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <div class="row g-2">
-                                                <div class="col-6">
-                                                    <small class="text-muted">Cost:</small><br/>
-                                                    <span class="badge bg-info">@(card.Cost?.ToString() ?? "-")</span>
-                                                </div>
-                                                <div class="col-6">
-                                                    <small class="text-muted">Power:</small><br/>
-                                                    <span class="badge bg-success">@(card.Power?.ToString() ?? "-")</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <a href="/card/@card.RowKey" class="btn btn-primary btn-sm">
-                                                View Details
-                                            </a>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            }
         </div>
     </div>
 </div>
-
-@code {
-    private List<CardMetadata>? storedCards;
-    private List<CardMetadata> filteredCards = new();
-    private bool isLoading = true;
-    private string searchTerm = "";
-    private string filterType = "";
-    private string filterColor = "";
-    private string viewMode = "grid";
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadLibraryAsync();
-    }
-
-    private async Task LoadLibraryAsync()
-    {
-        try
-        {
-            isLoading = true;
-            StateHasChanged();
-            
-            storedCards = await AzureStorageService.GetAllCardMetadataAsync();
-            ApplyFilters();
-        }
-        catch (Exception ex)
-        {
-            // Handle error - you might want to show a user-friendly error message
-            Console.WriteLine($"Error loading library: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshLibrary()
-    {
-        await LoadLibraryAsync();
-    }
-
-    private void ApplyFilters()
-    {
-        if (storedCards == null)
-        {
-            filteredCards = new();
-            return;
-        }
-
-        var query = storedCards.AsQueryable();
-
-        // Apply search filter
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var searchLower = searchTerm.ToLowerInvariant();
-            query = query.Where(c => 
-                (!string.IsNullOrEmpty(c.CardNameEnglish) && c.CardNameEnglish.ToLowerInvariant().Contains(searchLower)) ||
-                (!string.IsNullOrEmpty(c.CardNameJapanese) && c.CardNameJapanese.ToLowerInvariant().Contains(searchLower)) ||
-                (!string.IsNullOrEmpty(c.CardType) && c.CardType.ToLowerInvariant().Contains(searchLower)) ||
-                (!string.IsNullOrEmpty(c.Color) && c.Color.ToLowerInvariant().Contains(searchLower)) ||
-                (!string.IsNullOrEmpty(c.Rarity) && c.Rarity.ToLowerInvariant().Contains(searchLower))
-            );
-        }
-
-        // Apply type filter
-        if (!string.IsNullOrWhiteSpace(filterType))
-        {
-            query = query.Where(c => c.CardType == filterType);
-        }
-
-        // Apply color filter
-        if (!string.IsNullOrWhiteSpace(filterColor))
-        {
-            query = query.Where(c => c.Color == filterColor);
-        }
-
-        filteredCards = query.ToList();
-    }
-
-    private string GetColorClass(string color)
-    {
-        return color?.ToLowerInvariant() switch
-        {
-            "red" => "danger",
-            "blue" => "primary",
-            "green" => "success",
-            "purple" => "purple",
-            "black" => "dark",
-            "yellow" => "warning",
-            _ => "secondary"
-        };
-    }
-}
