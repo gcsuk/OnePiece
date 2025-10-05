@@ -131,7 +131,7 @@ public class OpenAIVisionService : IOpenAIVisionService
         }
 
         // Use smaller image size for cost optimization
-        return await TranslateCardToEnglishAsync(bytes, "image/jpeg", _options.ApiKey, size: "512x512");
+        return await TranslateCardToEnglishAsync(bytes, "image/jpeg", _options.ApiKey);
     }
 
     private static async Task<MemoryStream> DownscaleToJpegAsync(Stream imageStream, int maxSide, int quality)
@@ -169,7 +169,7 @@ public class OpenAIVisionService : IOpenAIVisionService
         - Identify card type, color, cost, power, rarity
         - Capture effect text completely
         - Set confidence scores (0.0-1.0)
-        - Return valid JSON only
+        - Return valid JSON only, no backticks, no prose
         """;
 
     // Optimized user prompt - reduced from ~150 tokens to ~60 tokens
@@ -213,7 +213,7 @@ public class OpenAIVisionService : IOpenAIVisionService
         string apiKey,
         string? promptOverride = null,
         byte[]? maskPng = null,
-        string size = "512x512", // Default to 512x512 for cost optimization
+        string size = "1024x1024", // Default to 512x512 for cost optimization
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
